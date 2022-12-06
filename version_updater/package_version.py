@@ -16,6 +16,7 @@ class WrongVersionFormatError(Exception):
 
 
 def read_version_info(filename: Union[str, Path]) -> List[int]:
+    filename = Path(filename).absolute().resolve()
     contents = json.load(open(filename, "r"))
     if "version_info" not in contents:
         raise WrongVersionFormatError(
@@ -25,6 +26,7 @@ def read_version_info(filename: Union[str, Path]) -> List[int]:
 
 
 def read_version(filename: Union[str, Path]) -> str:
+    filename = Path(filename).absolute().resolve()
     contents = json.load(open(filename, "r"))
     if "version" not in contents:
         raise WrongVersionFormatError(
@@ -71,7 +73,7 @@ def find_version_path(args: argparse.Namespace) -> Path:
             return vfiles[0]
 
         if len(vfiles) == 0:
-            msg = f"No version found. Creating new version in {dir_} ."
+            msg = f"No version found. Creating new version in {dir_.absolute().resolve()} ."
             if "force" in args and args.force:
                 print("WARNING:", msg)
                 write_version(dir_ / "version.json", [1, 0, 0])
@@ -102,7 +104,7 @@ class ArgsView(argparse.Namespace):
 
 def view_version_func(args: ArgsView):
     filename = find_version_path(args)
-    print("File:", filename.absolute())
+    print("File:", filename.absolute().resolve())
     print("Version:", read_version(filename=filename))
 
 
@@ -119,7 +121,7 @@ def update_version_func(args: ArgsUpdate):
 
     filename = find_version_path(args)
 
-    print("File:", filename.absolute())
+    print("File:", filename.absolute().resolve())
 
     version_info = read_version_info(filename=filename)
 
