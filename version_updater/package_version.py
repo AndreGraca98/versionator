@@ -4,7 +4,11 @@ import sys
 from pathlib import Path
 from typing import Callable, List, Union
 
-__all__ = ["pckg_versioner"]
+__all__ = [
+    "pckg_versioner",
+    "read_version_info",
+    "read_version",
+]
 
 
 class WrongVersionFormatError(Exception):
