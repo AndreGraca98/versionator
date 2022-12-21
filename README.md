@@ -61,6 +61,10 @@ source ~/.bashrc
 ### 2. bump
 
 ```bash
+# If version does not exist create new file
+$ VersionUpdater bump patch --force -f version_updater
+WARNING: No version found. Creating new version in /home/brisa/version-updater/version_updater
+
 # Bump version patch
 $ VersionUpdater bump minor --force
 File: /home/brisa/version-updater/version_updater/version.json
