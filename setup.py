@@ -27,7 +27,7 @@ class PostInstallCommand(install):
 setup(
     name="version-updater",
     version=json.load(open("version_updater/version.json"))["version"],
-    description="version-updater is a simple and easy to use tool to update package versions.",
+    description="version-updater is a simple and easy to use tool to update package versions using a file named version.json to track your project versions and optionaly the repo tag.",
     author="André Graça",
     author_email="andre.p.g@sapo.pt",
     platforms="Python",
