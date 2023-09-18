@@ -18,7 +18,7 @@ class PostInstallCommand(install):
     """Pre-installation for installation mode."""
 
     def run(self):
-        install.run(self)
+        super().run()
         for cmd in script.split("\n"):
             if cmd.strip():
                 subprocess.run(cmd, shell=True, check=True)
@@ -33,7 +33,6 @@ setup(
     author="André Graça",
     author_email="andrepgraca+versionator@gmail.com",
     platforms="Python",
-    packages=["versionator"],
     cmdclass={
         "install": PostInstallCommand,
     },

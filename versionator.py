@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 DEFAULT_VERSION = "0.0.0"
+COMMIT_MSG = '"chore: update version"'
 
 
 class Identifiers:
@@ -28,61 +29,100 @@ class MultipleFilesFoundError(OSError):
     files: list[Path]
 
     def __str__(self):
-        files = ", ".join(map(str, self.files))
+        files = ", ".join(map(repr, self.files))
         return f"Found more than one file with the same name: {files}"
 
 
-def find_version_file_path() -> Path:
-    files = list(Path(".").rglob("_version.py"))
-    if len(files) == 1:
-        return files[0]
-    if len(files) > 1:
-        raise MultipleFilesFoundError(files)
+class Versionator:
+    def __init__(self) -> None:
+        self.version_path: Path = self._get_version_file()
 
-    _help = (
-        f"Run the following: echo '__version__ = \"{DEFAULT_VERSION}\"' > _version.py\n"
-    )
-    raise FileNotFoundError(f"Could not find _version.py. {_help}")
+    @property
+    def version(self) -> str:
+        return self._extract_version_from_file()
 
+    @property
+    def version_info(self) -> list[int]:
+        return version2info(self.version)
 
-def extract_version_from_file(file: Path) -> str:
-    version_file_content = file.read_text()
-    match = re.compile(r'__version__ = "(?P<version>\d+\.\d+\.\d+)"').match(
-        version_file_content
-    )
-    if not match:
-        raise ValueError("Could not find version in _version.py")
+    def bump_version(self, identifier: str, dryrun: bool = False) -> None:
+        file: Path = self.version_path
+        version: str = self.version
 
-    version = match.groupdict()["version"]
-    return version
+        new_version_info = update_version_info(self.version_info, identifier)
+        new_version: str = info2version(new_version_info)
 
+        if dryrun:
+            print(f'Updating version "{version}" to "{new_version}"')
+            return
 
-def update_version_file(file: Path, version: str, new_version: str) -> None:
-    current_content = file.read_text()
-    new_content = current_content.replace(
-        f'__version__ = "{version}"', f'__version__ = "{new_version}"'
-    )
-    file.write_text(new_content)
+        current_content = file.read_text()
+        new_content = current_content.replace(
+            f'__version__ = "{version}"', f'__version__ = "{new_version}"'
+        )
+        file.write_text(new_content)
 
+    def tag(self, tag_message: str, dryrun: bool = False) -> None:
+        file: Path = self.version_path
+        version: str = self.version
 
-def tag(file: Path, version: str, tag_message: str) -> None:
-    def prepare_tag_message(msg: str) -> str:
-        msg_lines = msg.split("\n")
-        msg_lines = [line.strip() for line in msg_lines if line.strip()]
-        msg = " ".join(f'-m "{line}"' for line in msg_lines)
-        return msg
+        def prepare_tag_message(msg: str) -> str:
+            if not msg:
+                return '-m ""'
+            msg_lines = msg.split("\n")
+            msg_lines = [line.strip() for line in msg_lines if line.strip()]
+            msg = " ".join(f'-m "{line}"' for line in msg_lines)
+            return msg
 
-    # Check if version was updated/is waiting to be committed
-    proc = subprocess.run(f"git status {file}", shell=True, capture_output=True)
-    if "nothing to commit, working tree clean" in proc.stdout.decode():
-        raise RuntimeError("Version was not updated for some reason.")
+        if dryrun:
+            print(
+                f"Staging {file}, commiting with message {COMMIT_MSG} "
+                f"and tagging {version} with '{prepare_tag_message(tag_message)}'"
+            )
+            return
 
-    # Add, commit, tag . Return code 0 means success
-    assert 0 == subprocess.call(f"git add {file}", shell=True)
-    assert 0 == subprocess.call('git commit -m "chore: updated version"', shell=True)
-    assert 0 == subprocess.call(
-        f"git tag -a {version} {prepare_tag_message(tag_message)}", shell=True
-    )
+        # Check if version was updated/is waiting to be committed
+        proc = subprocess.run(f"git status {file}", shell=True, capture_output=True)
+        if "nothing to commit, working tree clean" in proc.stdout.decode():
+            raise RuntimeError("Not tagging. Version was not changed.")
+
+        # Add, commit, tag . Return code 0 means success
+        cmd = f"git add {file}"
+        process = subprocess.run(cmd, shell=True)
+        assert process.returncode == 0, f"Failed '{cmd}'"
+
+        cmd = f"git commit -m {COMMIT_MSG}"
+        process = subprocess.run(cmd, shell=True)
+        assert process.returncode == 0, f"Failed '{cmd}'"
+
+        cmd = f"git tag -a {version} {prepare_tag_message(tag_message)}"
+        process = subprocess.run(cmd, shell=True)
+        assert process.returncode == 0, f"Failed '{cmd}'"
+
+    def _get_version_file(self) -> Path:
+        files = list(Path(".").rglob("_version.py"))
+        if len(files) == 1:
+            return files[0]
+        if len(files) > 1:
+            raise MultipleFilesFoundError(files)
+
+        _help = (
+            "Run the following: "
+            f"echo '__version__ = \"{DEFAULT_VERSION}\"' > _version.py\n"
+        )
+        raise FileNotFoundError(f"Could not find _version.py. {_help}")
+
+    def _extract_version_from_file(self) -> str:
+        file: Path = self.version_path
+        version_file_content = file.read_text()
+        match = re.compile(r'__version__ = "(?P<version>\d+\.\d+\.\d+)"').match(
+            version_file_content
+        )
+        if not match:
+            raise ValueError("Could not find version in _version.py")
+
+        version = match.groupdict()["version"]
+        return version
 
 
 def update_version_info(version_info: list[int], identifier: str) -> list[int]:
@@ -122,55 +162,50 @@ def get_previous_tag() -> str:
     )
 
 
+def info(about: str) -> None:
+    from _version import __version__
+
+    if about == "version":
+        print(__version__)
+    elif about == "version-info":
+        print(version2info(__version__))
+    elif about == "tag":
+        print(get_previous_tag())
+
+
 def main() -> None:
     parser = get_parser()
     args = get_args(parser)
-    print(args)
 
-    VERSION_FILE = find_version_file_path()
-
-    version = extract_version_from_file(VERSION_FILE)
-    version_info = version2info(version)
+    versionator = Versionator()
 
     if args.action == "bump":
-        new_version_info = update_version_info(version_info, args.identifier)
-        new_version = info2version(new_version_info)
-
-        if args.dry_run:
-            print("Updating version from", version, "to", new_version)
-        else:
-            update_version_file(VERSION_FILE, version, new_version)
+        versionator.bump_version(args.identifier, args.dryrun)
 
         if args.tag_message is not None:
-            if args.dry_run:
-                print(
-                    "Tagging version", new_version, " with message:", args.tag_message
-                )
-            else:
-                tag(VERSION_FILE, new_version, args.tag_message)
+            versionator.tag(args.tag_message, args.dryrun)
 
-    if args.action == "tag":
-        if args.dry_run:
-            print("Tagging version", version, " with message:", args.tag_message)
-        else:
-            tag(VERSION_FILE, version, args.tag_message)
-        return
+    elif args.action == "tag":
+        versionator.tag(args.tag_message, args.dryrun)
+
+    elif args.action == "info":
+        info(args.about)
 
 
 def get_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Update version and tag it with a message"
     )
-
     sub_parser = parser.add_subparsers(dest="action", required=True)
-    update_parser = sub_parser.add_parser("bump")
-    update_parser.add_argument(
+
+    bump_parser = sub_parser.add_parser("bump")
+    bump_parser.add_argument(
         "identifier",
         type=str,
         choices=Identifiers.names(),
-        help="Which part of the version to update",
+        help="Which part of the version to bump",
     )
-    update_parser.add_argument(
+    bump_parser.add_argument(
         "-t",
         "--tag",
         type=str,
@@ -180,6 +215,8 @@ def get_parser() -> argparse.ArgumentParser:
         dest="tag_message",
         help="Tag the version with a message",
     )
+    bump_parser.add_argument("-d", "--dryrun", action="store_true", help="Dry run")
+
     tag_parser = sub_parser.add_parser("tag")
     tag_parser.add_argument(
         "tag_message",
@@ -188,9 +225,13 @@ def get_parser() -> argparse.ArgumentParser:
         default="",
         help="Tag the version with a message",
     )
-    update_parser.add_argument("-d", "--dry-run", action="store_true", help="Dry run")
-    tag_parser.add_argument("-d", "--dry-run", action="store_true", help="Dry run")
-    parser.add_argument("-d", "--dry-run", action="store_true", help="Dry run")
+    tag_parser.add_argument("-d", "--dryrun", action="store_true", help="Dry run")
+
+    info_parser = sub_parser.add_parser("info")
+    info_sub_parser = info_parser.add_subparsers(required=True, dest="about")
+    info_sub_parser.add_parser("version", help="Get the latest version")
+    info_sub_parser.add_parser("version-info", help="Get the latest version info")
+    info_sub_parser.add_parser("tag", help="Get the latest tag")
 
     return parser
 
