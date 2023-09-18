@@ -7,10 +7,9 @@ from setuptools.command.install import install
 from _version import __version__
 
 script = f"""
-chmod +x update_version.py
-cp update_version.py versionator
+chmod +x versionator.py
+cp versionator.py versionator
 mkdir -p {Path.home()}/bin/
-cp -r version_updater {Path.home()}/bin/
 cp versionator {Path.home()}/bin/
 """
 
@@ -26,15 +25,15 @@ class PostInstallCommand(install):
 
 
 setup(
-    name="version-updater",
+    name="versionator",
     version=__version__,
-    description="version-updater is a simple and easy to use tool to "
+    description="versionator is a simple and easy to use tool to "
     "update package versions using a file named _version.py to track "
     "your project versions and optionaly tag it in git.",
     author="André Graça",
-    author_email="andre.p.g@sapo.pt",
+    author_email="andrepgraca+versionator@gmail.com",
     platforms="Python",
-    packages=["version_updater"],
+    packages=["versionator"],
     cmdclass={
         "install": PostInstallCommand,
     },

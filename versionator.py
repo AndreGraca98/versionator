@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import argparse
 import re
 import subprocess
@@ -34,7 +36,7 @@ def find_version_file_path() -> Path:
     files = list(Path(".").rglob("_version.py"))
     if len(files) == 1:
         return files[0]
-    elif len(files) > 1:
+    if len(files) > 1:
         raise MultipleFilesFoundError(files)
 
     _help = (
@@ -130,20 +132,28 @@ def main() -> None:
     version = extract_version_from_file(VERSION_FILE)
     version_info = version2info(version)
 
-    if args.action == "update":
+    if args.action == "bump":
         new_version_info = update_version_info(version_info, args.identifier)
         new_version = info2version(new_version_info)
 
-        print("Updating version from", version, "to", new_version)
-        # update_version_file(VERSION_FILE, version, new_version)
+        if args.dry_run:
+            print("Updating version from", version, "to", new_version)
+        else:
+            update_version_file(VERSION_FILE, version, new_version)
 
         if args.tag_message is not None:
-            print("Tagging version", new_version, " with message:", args.tag_message)
-            # tag(VERSION_FILE, new_version, args.tag_message)
+            if args.dry_run:
+                print(
+                    "Tagging version", new_version, " with message:", args.tag_message
+                )
+            else:
+                tag(VERSION_FILE, new_version, args.tag_message)
 
     if args.action == "tag":
-        print("Tagging version", version, " with message:", args.tag_message)
-        # tag(VERSION_FILE, version, args.tag_message)
+        if args.dry_run:
+            print("Tagging version", version, " with message:", args.tag_message)
+        else:
+            tag(VERSION_FILE, version, args.tag_message)
         return
 
 
@@ -153,7 +163,7 @@ def get_parser() -> argparse.ArgumentParser:
     )
 
     sub_parser = parser.add_subparsers(dest="action", required=True)
-    update_parser = sub_parser.add_parser("update")
+    update_parser = sub_parser.add_parser("bump")
     update_parser.add_argument(
         "identifier",
         type=str,
@@ -178,6 +188,9 @@ def get_parser() -> argparse.ArgumentParser:
         default="",
         help="Tag the version with a message",
     )
+    update_parser.add_argument("-d", "--dry-run", action="store_true", help="Dry run")
+    tag_parser.add_argument("-d", "--dry-run", action="store_true", help="Dry run")
+    parser.add_argument("-d", "--dry-run", action="store_true", help="Dry run")
 
     return parser
 
