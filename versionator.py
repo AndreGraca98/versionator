@@ -93,7 +93,7 @@ class Versionator:
             exit(1)
 
         cmd = f"git commit -m {COMMIT_MSG}"
-        process = subprocess.run(cmd, shell=True)
+        process = subprocess.run(cmd, shell=True, capture_output=True)
         if (
             process.returncode != 0
             and "nothing to commit" not in process.stderr.decode()
