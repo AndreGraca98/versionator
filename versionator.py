@@ -96,7 +96,8 @@ class Versionator:
         process = subprocess.run(cmd, shell=True, capture_output=True)
         if (
             process.returncode != 0
-            and "nothing to commit" not in process.stderr.decode()
+            and "nothing to commit"
+            not in process.stderr.decode() + process.stdout.decode()
         ):
             subprocess.run(f"git reset {file}", shell=True)
             print(f"{process.stdout.decode()}")
