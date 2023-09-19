@@ -99,6 +99,8 @@ class Versionator:
             and "nothing to commit" not in process.stderr.decode()
         ):
             subprocess.run(f"git reset {file}", shell=True)
+            print(f"{process.stdout.decode()}")
+            print(f"{process.stderr.decode()}")
             print(f"Failed '{cmd}' . Rolling back changes")
             exit(1)
 
