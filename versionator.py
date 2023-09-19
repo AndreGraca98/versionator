@@ -122,7 +122,7 @@ class Versionator:
             exit(1)
 
     def _get_version_file(self) -> Path:
-        files = list(Path(".").rglob("_version.py"))
+        files = list(Path(".").glob("_version.py"))
         if len(files) == 1:
             return files[0]
         if len(files) > 1:
@@ -132,7 +132,7 @@ class Versionator:
             "Run the following: "
             f"echo '__version__ = \"{DEFAULT_VERSION}\"' > _version.py\n"
         )
-        raise FileNotFoundError(f"Could not find _version.py. {_help}")
+        raise FileNotFoundError(f"Could not find _version.py in {Path.cwd()}. {_help}")
 
     def _extract_version_from_file(self) -> str:
         file: Path = self.version_path
@@ -188,12 +188,12 @@ def get_latest_tag() -> str:
 
 
 def info(about: str) -> None:
-    from _version import __version__
+    version = Versionator().version
 
     if about == "version":
-        print(__version__)
+        print(version)
     elif about == "version-info":
-        print(version2info(__version__))
+        print(version2info(version))
     elif about == "tag":
         print(get_latest_tag())
 

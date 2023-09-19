@@ -18,6 +18,7 @@ class PostInstallCommand(install):
 
     def run(self):
         super().run()
+        print("Running post install script")
         for cmd in script.split("\n"):
             if cmd.strip():
                 subprocess.run(cmd, shell=True, check=True)
