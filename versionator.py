@@ -88,20 +88,23 @@ class Versionator:
         # Add, commit, tag . Return code 0 means success
         cmd = f"git add {file}"
         process = subprocess.run(cmd, shell=True)
-        if not process.returncode == 0:
+        if process.returncode != 0:
             print(f"Failed '{cmd}' . Rolling back changes")
             exit(1)
 
         cmd = f"git commit -m {COMMIT_MSG}"
         process = subprocess.run(cmd, shell=True)
-        if not process.returncode == 0:
+        if (
+            process.returncode != 0
+            and "nothing to commit" not in process.stderr.decode()
+        ):
             subprocess.run(f"git reset {file}", shell=True)
             print(f"Failed '{cmd}' . Rolling back changes")
             exit(1)
 
         cmd = f"git tag -a {version} {prepare_tag_message(tag_message)}"
         process = subprocess.run(cmd, shell=True)
-        if not process.returncode == 0:
+        if process.returncode != 0:
             subprocess.run("git reset --soft HEAD~", shell=True)
             subprocess.run(f"git reset {file}", shell=True)
             print(f"Failed '{cmd}' . Rolling back changes")
