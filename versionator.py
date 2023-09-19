@@ -81,24 +81,9 @@ class Versionator:
             )
             return
 
-        # Check if version was updated/is waiting to be committed
-        def is_valid_tag() -> tuple[bool, str]:
-            latest_tag = get_latest_tag()
-
-            if latest_tag == version:
-                return False, f"Version {version} is already tagged. "
-
-            proc = subprocess.run(
-                f"git status {file}", shell=True, check=True, capture_output=True
-            )
-            return (
-                "nothing to commit, working tree clean" not in proc.stdout.decode(),
-                f"Version {version} was not changed",
-            )
-
-        is_valid, invalid_msg = is_valid_tag()
-        if not is_valid:
-            raise RuntimeError(f"Not tagging! {invalid_msg}")
+        # Check if version is valid for tagging
+        if get_latest_tag() == version:
+            raise RuntimeError(f"Not tagging! Version {version} is already tagged.")
 
         # Add, commit, tag . Return code 0 means success
         cmd = f"git add {file}"
