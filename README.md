@@ -1,8 +1,8 @@
 # Version Updater
 
-![badge](https://img.shields.io/github/package-json/v/AndreGraca98/version-updater?filename=version_updater%2Fversion.json&label=version-updater&logo=python&logoColor=yellow)
+![badge](https://img.shields.io/github/v/tag/AndreGraca98/version-updater?logo=python&logoColor=yellow&label=version)
 
-version-updater is a simple and easy to use tool to update package versions using a file named version.json to track your project versions and optionaly the repo tag.
+`versionator` is a simple and easy to use tool to update package versions using a file named _version.py to track your project versions and optionaly also tag the repo.
 
 - [Version Updater](#version-updater)
   - [Requirements](#requirements)
@@ -10,7 +10,7 @@ version-updater is a simple and easy to use tool to update package versions usin
   - [Usage](#usage)
     - [1. info](#1-info)
     - [2. bump](#2-bump)
-  - [TODO](#todo)
+    - [3. tag](#3-tag)
 
 ## Requirements
 
@@ -19,13 +19,7 @@ version-updater is a simple and easy to use tool to update package versions usin
 ## Install
 
 ```bash
-# Install package
-pip install git+https://github.com/AndreGraca98/version-updater.git
-
-# If $HOME/bin/ is not in the $PATH add it in the ~/.bashrc and reload terminal
-printf "\n\n"PATH="\$HOME/bin:\$PATH\n\n\n" >> ~/.bashrc
-source ~/.bashrc
-
+pip install git+https://github.com/AndreGraca98/versionator.git
 ```
 
 ## Usage
@@ -34,71 +28,50 @@ source ~/.bashrc
 
   ```bash
   # View the current version
-  $ VersionUpdater
-  WARNING: use the 'info' subcommand for different arguments
-  File: /home/brisa/version-updater/version_updater/version.json
-  Version: 1.1.0
-
-  $ VersionUpdater info
-  File: /home/brisa/version-updater/version_updater/version.json
-  Version: 1.1.0
-
-  $ VersionUpdater info --tag
-  File: /home/brisa/version-updater/version_updater/version.json
-  Version: 1.1.0
-  Repo git tags:
-  v1.0.0
-  v1.1.0
-
-  # View the current version for a specific folder/file
-  $ VersionUpdater info -f ../basic-tools/ --tag
-  File: /home/brisa/basic-tools/basic_tools/version.json
-  Version: 1.1.0
-  Repo git tags:
-
+  $ versionator info version
+  2.0.0
+  $ versionator info version-info
+  [2, 0, 0]
+  $ versionator info tag
+  2.0.0
   ```
 
 ### 2. bump
 
+Will raise `FileNotFoundError` if version does not exist.
+
 ```bash
-# If version does not exist create new file
-$ VersionUpdater bump patch --force -f version_updater
-WARNING: No version found. Creating new version in /home/brisa/version-updater/version_updater
+$ versionator bump fix
+FileNotFoundError: Could not find _version.py in <your-repo>. Run the following: echo '__version__ = "0.0.0"' > _version.py
 
-# Bump version patch
-$ VersionUpdater bump minor --force
-File: /home/brisa/version-updater/version_updater/version.json
-Current version: '1.0.0'
-Updated version to '1.1.0'
+# Update version to the next patch version
+$ versionator info version
+2.0.0
+$ versionator bump fix
+$ versionator info version
+2.0.1
 
+# if flag -d/--dryrun is used, the version is not updated. Only view what would happen
+$ versionator bump fix --dryrun
+Updating version "2.0.0" to "2.0.1"
 
-# if flag --force is not used the version is not updated. Only view what would happen
-$ VersionUpdater bump patch
-File: /home/brisa/version-updater/version_updater/version.json
-Current version: '1.1.0'
-DRYRUN: Updated version to '1.1.1'
-
-$ VersionUpdater bump minor
-File: /home/brisa/version-updater/version_updater/version.json
-Current version: '1.1.0'
-DRYRUN: Updated version to '1.2.0'
-
-$ VersionUpdater bump major
-File: /home/brisa/version-updater/version_updater/version.json
-Current version: '1.1.0'
-DRYRUN: Updated version to '2.0.0'
-
-# Update version and add tag to repo
-VersionUpdater bump major --tag
-Current version: '1.1.0'
-DRYRUN: Updated version to '2.0.0'
-DRYRUN: Added repo git tag 'v2.0.0'
-Current repo tags:
-v1.0.0
-v1.1.0
+# if flag -t/--tag is used, update version and also tag the repo with the version
+$ versionator info version
+2.0.0
+$ versionator info tag
+2.0.0
+$ versionator bump fix --tag
+$ versionator info version
+2.0.1
+$ versionator info tag
+2.0.1
 ```
 
-## TODO
-  
-  1. [ ] add tests
-  1. [x] improve find_version_path function to better handle file/dir inputs
+### 3. tag
+
+Will raise `RuntimeError` if the version is already tagged.
+
+```python
+# Tag the repo (note: the current version must be different from the latest tag)
+$ versionator tag
+```
