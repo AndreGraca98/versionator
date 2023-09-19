@@ -19,7 +19,11 @@
 ## Install
 
 ```bash
+# Install the tool
 pip install git+https://github.com/AndreGraca98/versionator.git
+
+# Add tab-completion
+echo '[ -f ~/bin/versionator ] && source /dev/stdin <<<"$(versionator COMPLETION INIT)"' >>~/.bash_completion
 ```
 
 ## Usage
@@ -28,11 +32,11 @@ pip install git+https://github.com/AndreGraca98/versionator.git
 
   ```bash
   # View the current version
-  $ versionator info version
+  $ versionator info --version
   2.0.0
-  $ versionator info version-info
+  $ versionator info --version-info
   [2, 0, 0]
-  $ versionator info tag
+  $ versionator info --tag
   2.0.0
   ```
 

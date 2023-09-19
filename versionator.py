@@ -187,36 +187,6 @@ def get_latest_tag() -> str:
     )
 
 
-def info(about: str) -> None:
-    version = Versionator().version
-
-    if about == "version":
-        print(version)
-    elif about == "version-info":
-        print(version2info(version))
-    elif about == "tag":
-        print(get_latest_tag())
-
-
-def main() -> None:
-    parser = get_parser()
-    args = get_args(parser)
-
-    versionator = Versionator()
-
-    if args.action == "bump":
-        versionator.bump_version(args.identifier, args.dryrun)
-
-        if args.tag_message is not None:
-            versionator.tag(args.tag_message, args.dryrun)
-
-    elif args.action == "tag":
-        versionator.tag(args.tag_message, args.dryrun)
-
-    elif args.action == "info":
-        info(args.about)
-
-
 def get_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Update version and tag it with a message"
@@ -253,23 +223,165 @@ def get_parser() -> argparse.ArgumentParser:
     tag_parser.add_argument("-d", "--dryrun", action="store_true", help="Dry run")
 
     info_parser = sub_parser.add_parser("info")
-    info_sub_parser = info_parser.add_subparsers(required=True, dest="about")
-    info_sub_parser.add_parser("version", help="Get the latest version")
-    info_sub_parser.add_parser("version-info", help="Get the latest version info")
-    info_sub_parser.add_parser("tag", help="Get the latest tag")
+    group = info_parser.add_mutually_exclusive_group(required=True)
+    group.add_argument(
+        "--version-info",
+        action="store_const",
+        const="version-info",
+        default=None,
+        dest="about",
+    )
+    group.add_argument(
+        "--tag", action="store_const", const="tag", default=None, dest="about"
+    )
+    group.add_argument(
+        "--version", action="store_const", const="version", default=None, dest="about"
+    )
 
     return parser
 
 
 def get_args(parser: argparse.ArgumentParser) -> argparse.Namespace:
-    # args = parser.parse_args(["update","fix"])
-    # args = parser.parse_args(["update","fix", "--tag"])
-    # args = parser.parse_args(["update","fix","--tag","feat: something"])
-    # args = parser.parse_args(["tag"])
-    # args = parser.parse_args(["tag", "feat: something"])
     args = parser.parse_args()
     return args
 
 
+def main(parser: argparse.ArgumentParser) -> None:
+    args = get_args(parser)
+
+    versionator = Versionator()
+
+    if args.action == "bump":
+        versionator.bump_version(args.identifier, args.dryrun)
+
+        if args.tag_message is not None:
+            versionator.tag(args.tag_message, args.dryrun)
+
+    elif args.action == "tag":
+        versionator.tag(args.tag_message, args.dryrun)
+
+    elif args.action == "info":
+        if args.about == "version":
+            print(versionator.version)
+        elif args.about == "version-info":
+            print(version2info(versionator.version))
+        elif args.about == "tag":
+            print(get_latest_tag())
+
+
+def tab_complete(parser: argparse.ArgumentParser):
+    """Bash autocomplete for subcommands and actions.
+    This function is called when the script is run with
+    the argument BASH_COMPLETION and the argument SUBCOMMANDS or ACTIONS {subcommand}}
+    """
+
+    def get_commands_and_options(parser):
+        subparsers_and_options = {}
+        for action in parser._actions:
+            if not isinstance(action, argparse._SubParsersAction):
+                continue
+            for subparser_name, subparser in action.choices.items():
+                options = []
+                for option in subparser._actions:
+                    if "-h" in option.option_strings:
+                        continue
+                    if option.choices:
+                        options.extend(option.choices)
+                    options.extend(option.option_strings)
+                subparsers_and_options[subparser_name] = options + ["-h", "--help"]
+        return subparsers_and_options
+
+    def __get_commands():
+        return " ".join(get_commands_and_options(parser).keys())
+
+    def __get_command_options(subcommand: str):
+        return " ".join(get_commands_and_options(parser)[subcommand])
+
+    import sys
+
+    if "COMPLETION" in sys.argv[1:]:
+        if "INIT" in sys.argv[1:]:
+            print(
+                """
+
+# versionator
+# START: Bash auto completion for versionator
+# Do not edit the following line; it is used by versionator
+_versionator_complete() {
+    local cur prev
+    cur=${COMP_WORDS[COMP_CWORD]}
+    prev=${COMP_WORDS[COMP_CWORD - 1]}
+
+    case ${COMP_CWORD} in
+    1)
+        COMPREPLY=($(compgen -W "$(versionator COMPLETION COMMANDS)" -- ${cur}))
+        ;;
+    2)
+        case ${prev} in
+        bump)
+            COMPREPLY=($(compgen -W "$(versionator COMPLETION OPTIONS bump)" -- ${cur}))
+            ;;
+        tag)
+            COMPREPLY=($(compgen -W "$(versionator COMPLETION OPTIONS tag)" -- ${cur}))
+            ;;
+        info)
+            COMPREPLY=($(compgen -W "$(versionator COMPLETION OPTIONS info)" -- ${cur}))
+            ;;
+        *)
+            COMPREPLY=()
+            ;;
+        esac
+        ;;
+    *)
+        COMPREPLY=($(compgen -f -- ${cur}))
+
+        ;;
+    esac
+}
+complete -F _versionator_complete versionator
+# END: Bash auto completion for versionator
+
+"""
+            )
+            exit(0)
+        elif "COMMANDS" in sys.argv[1:]:
+            if len(sys.argv) in (3, 4):
+                print(__get_commands())
+                exit(0)
+
+            _help = (
+                "Invalid bash completion arguments. Got: "
+                f"{sys.argv}. Should be: "
+                "'python versionator.py COMPLETION COMMANDS' or "
+                "'versionator COMPLETION COMMANDS'"
+            )
+        elif "OPTIONS" in sys.argv[1:]:
+            if len(sys.argv) in (4, 5):
+                print(__get_command_options(sys.argv[~0]))
+                exit(0)
+
+            _help = (
+                "Invalid bash completion arguments. Got: "
+                f"{sys.argv}. Should be: "
+                "'python versionator.py COMPLETION OPTIONS {subcommand}' or "
+                "'versionator COMPLETION OPTIONS {subcommand}'"
+            )
+
+        else:
+            _help = (
+                "Invalid bash completion arguments. Got: "
+                f"{sys.argv}. Should be: "
+                "'python versionator.py COMPLETION INIT' or "
+                "'versionator COMPLETION INIT' or"
+                "'python versionator.py COMPLETION COMMANDS' or "
+                "'versionator COMPLETION COMMANDS' or "
+                "'python versionator.py COMPLETION OPTIONS {subcommand}' or "
+                "'versionator COMPLETION OPTIONS {subcommand}'"
+            )
+        raise ValueError(_help)
+
+
 if __name__ == "__main__":
-    main()
+    parser = get_parser()
+    tab_complete(parser)
+    main(parser)
