@@ -21,7 +21,7 @@ class Identifiers:
 
     @classmethod
     def names_repr(cls) -> str:
-        return ", ".join(list(map(repr, cls.names())))
+        return ", ".join(map(repr, cls.names()))
 
 
 @dataclass
@@ -82,22 +82,36 @@ class Versionator:
             return
 
         # Check if version was updated/is waiting to be committed
-        proc = subprocess.run(f"git status {file}", shell=True, capture_output=True)
-        if "nothing to commit, working tree clean" in proc.stdout.decode():
-            raise RuntimeError("Not tagging. Version was not changed.")
+        def is_valid_tag() -> tuple[bool, str]:
+            latest_tag = get_latest_tag()
+
+            if latest_tag == version:
+                return False, f"Version {version} is already tagged. "
+
+            proc = subprocess.run(
+                f"git status {file}", shell=True, check=True, capture_output=True
+            )
+            return (
+                "nothing to commit, working tree clean" not in proc.stdout.decode(),
+                f"Version {version} was not changed",
+            )
+
+        is_valid, invalid_msg = is_valid_tag()
+        if not is_valid:
+            raise RuntimeError(f"Not tagging! {invalid_msg}")
 
         # Add, commit, tag . Return code 0 means success
         cmd = f"git add {file}"
         process = subprocess.run(cmd, shell=True)
         if not process.returncode == 0:
-            print(f"Failed '{cmd}'")
+            print(f"Failed '{cmd}' . Rolling back changes")
             exit(1)
 
         cmd = f"git commit -m {COMMIT_MSG}"
         process = subprocess.run(cmd, shell=True)
         if not process.returncode == 0:
             subprocess.run(f"git reset {file}", shell=True)
-            print(f"Failed '{cmd}'")
+            print(f"Failed '{cmd}' . Rolling back changes")
             exit(1)
 
         cmd = f"git tag -a {version} {prepare_tag_message(tag_message)}"
@@ -105,7 +119,7 @@ class Versionator:
         if not process.returncode == 0:
             subprocess.run("git reset --soft HEAD~", shell=True)
             subprocess.run(f"git reset {file}", shell=True)
-            print(f"Failed '{cmd}'")
+            print(f"Failed '{cmd}' . Rolling back changes")
             exit(1)
 
     def _get_version_file(self) -> Path:
@@ -161,10 +175,13 @@ def info2version(info: list[int]) -> str:
     return ".".join(list(map(str, info)))
 
 
-def get_previous_tag() -> str:
+def get_latest_tag() -> str:
     return (
         subprocess.run(
-            "git describe --abbrev=0 --tags", shell=True, capture_output=True
+            "git describe --abbrev=0 --tags",
+            shell=True,
+            capture_output=True,
+            check=True,
         )
         .stdout.decode()
         .strip("\n")
@@ -179,7 +196,7 @@ def info(about: str) -> None:
     elif about == "version-info":
         print(version2info(__version__))
     elif about == "tag":
-        print(get_previous_tag())
+        print(get_latest_tag())
 
 
 def main() -> None:
