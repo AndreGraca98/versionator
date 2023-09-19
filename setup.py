@@ -8,9 +8,8 @@ from _version import __version__
 
 script = f"""
 chmod +x versionator.py
-cp versionator.py versionator
 mkdir -p {Path.home()}/bin/
-cp versionator {Path.home()}/bin/
+cp versionator.py {Path.home()}/bin/versionator
 """
 
 

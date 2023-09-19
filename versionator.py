@@ -6,6 +6,16 @@ import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
+__all__ = [
+    "MultipleFilesFoundError",
+    "Identifiers",
+    "Versionator",
+    "update_version_info",
+    "version2info",
+    "info2version",
+    "get_latest_tag",
+]
+
 DEFAULT_VERSION = "0.0.0"
 COMMIT_MSG = '"chore: update version"'
 
@@ -94,23 +104,21 @@ class Versionator:
 
         cmd = f"git commit -m {COMMIT_MSG}"
         process = subprocess.run(cmd, shell=True, capture_output=True)
-        if (
-            process.returncode != 0
-            and "nothing to commit"
-            not in process.stderr.decode() + process.stdout.decode()
+        if (process.returncode != 0) and (
+            "nothing to commit" not in process.stderr.decode() + process.stdout.decode()
         ):
-            subprocess.run(f"git reset {file}", shell=True)
             print(f"{process.stdout.decode()}")
             print(f"{process.stderr.decode()}")
             print(f"Failed '{cmd}' . Rolling back changes")
+            subprocess.run(f"git reset {file}", shell=True)
             exit(1)
 
         cmd = f"git tag -a {version} {prepare_tag_message(tag_message)}"
         process = subprocess.run(cmd, shell=True)
         if process.returncode != 0:
+            print(f"Failed '{cmd}' . Rolling back changes")
             subprocess.run("git reset --soft HEAD~", shell=True)
             subprocess.run(f"git reset {file}", shell=True)
-            print(f"Failed '{cmd}' . Rolling back changes")
             exit(1)
 
     def _get_version_file(self) -> Path:
