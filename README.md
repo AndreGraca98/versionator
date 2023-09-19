@@ -1,10 +1,10 @@
-# Version Updater
+# Versionator
 
 ![badge](https://img.shields.io/github/v/tag/AndreGraca98/version-updater?logo=python&logoColor=yellow&label=version)
 
 `versionator` is a simple and easy to use tool to update package versions using a file named _version.py to track your project versions and optionaly also tag the repo.
 
-- [Version Updater](#version-updater)
+- [Versionator](#versionator)
   - [Requirements](#requirements)
   - [Install](#install)
   - [Usage](#usage)
