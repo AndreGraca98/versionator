@@ -79,3 +79,7 @@ Will raise `RuntimeError` if the version is already tagged.
 # Tag the repo (note: the current version must be different from the latest tag)
 $ versionator tag
 ```
+
+## Todo
+
+[ ] if there is no tags it breaks when creating a new one
